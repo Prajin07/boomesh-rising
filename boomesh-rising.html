@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boomesh Rising</title>
+<!--
+  BOOMESH RISING - a dark 3D adventure (AI-assisted starter, 30% AI / 70% HUMAN)
+  Search this file for  [HUMAN]  to find every place you should change, rewrite or add to.
+  Needs internet once to load Three.js from the CDN below.
+-->
+<style>
+  :root{--red:#ff3b3b;--gold:#ffd35a}
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Segoe UI',Tahoma,sans-serif;color:#eee;user-select:none}
+  canvas{display:block}
+  .hidden{display:none !important}
+  .overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.9);text-align:center;padding:20px;z-index:20}
+  h1{font-size:clamp(30px,6vw,68px);letter-spacing:.14em;color:var(--red);text-shadow:0 0 18px #f00,0 0 44px #600;margin:0 0 8px}
+  .story{max-width:720px;line-height:1.55;color:#cbb;font-size:clamp(14px,1.6vw,18px)}
+  .small{color:#998;font-size:13px;max-width:720px;line-height:1.5}
+  #heroes{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:18px 0}
+  .hero{width:200px;padding:14px;border:1px solid #633;border-radius:10px;background:#140808;cursor:pointer;transition:.15s}
+  .hero:hover{border-color:var(--red);box-shadow:0 0 22px #a00;transform:translateY(-3px)}
+  .hero b{font-size:22px;display:block;margin-bottom:6px}
+  .hero span{font-size:13px;color:#baa}
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  #hudL{position:absolute;left:14px;top:12px;width:290px;text-shadow:0 0 6px #000}
+  #dimName{font-size:18px;letter-spacing:.12em;color:var(--gold);margin-bottom:6px}
+  .bar{height:12px;background:#220;border:1px solid #533;border-radius:6px;overflow:hidden;margin-bottom:5px}
+  .bar.sm{height:6px}
+  #hpFill{height:100%;width:100%;background:linear-gradient(90deg,#b00,#f44)}
+  #stFill{height:100%;width:100%;background:linear-gradient(90deg,#1a8,#6fc)}
+  #hintList{font-size:12px;color:#fd8;margin-top:8px;line-height:1.4}
+  #objective{font-size:13px;color:#ccc;margin-top:8px}
+  #hudR{position:absolute;right:16px;top:12px;text-align:center;text-shadow:0 0 6px #000}
+  #compass{width:64px;height:64px;border:2px solid #744;border-radius:50%;margin:0 auto 6px;position:relative;background:rgba(0,0,0,.4)}
+  #arrow{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--gold);transition:transform .08s}
+  #signal{font-size:13px;color:#fd8}
+  #bossBar{position:absolute;left:50%;top:14px;transform:translateX(-50%);width:min(520px,60vw);text-align:center}
+  #bossBar .bar{height:16px;border-color:#a3a}
+  #bossFill{height:100%;width:100%;background:linear-gradient(90deg,#609,#d4f)}
+  #toast{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);max-width:min(760px,88vw);text-align:center;font-size:clamp(14px,1.8vw,19px);background:rgba(0,0,0,.72);border:1px solid #644;padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .3s}
+  #toast.show{opacity:1}
+  #controls{position:absolute;left:14px;bottom:10px;font-size:12px;color:#988}
+  #dimTitle{position:absolute;left:0;right:0;top:34%;text-align:center;opacity:0}
+  #dimTitle.show{animation:fio 4.2s ease forwards}
+  #dimTitle h2{font-size:clamp(28px,5vw,58px);letter-spacing:.2em;margin:0;color:#fff;text-shadow:0 0 24px var(--red)}
+  #dimTitle p{margin:6px 0 0;color:#cbb;font-size:clamp(14px,1.8vw,20px)}
+  @keyframes fio{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+  #hurt{position:absolute;inset:0;background:radial-gradient(circle,transparent 40%,rgba(200,0,0,.8));opacity:0}
+  .panel{background:#120808;border:1px solid #744;border-radius:12px;padding:22px 26px;max-width:560px}
+  .panel h2{margin:0 0 10px;color:var(--gold);letter-spacing:.1em}
+  #codeHints{font-size:14px;color:#fd8;text-align:left;margin:10px 0 14px;line-height:1.5}
+  .digits{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
+  .digits input{width:52px;height:60px;font-size:32px;text-align:center;background:#000;color:var(--gold);border:2px solid #744;border-radius:8px}
+  button{background:#400;color:#fff;border:1px solid #a44;padding:10px 20px;border-radius:8px;font-size:15px;cursor:pointer;margin:0 5px}
+  button:hover{background:#700}
+  #endBox{background:rgba(255,246,220,.9);color:#2a2418}
+  #endBox h1{color:#c89000;text-shadow:0 0 20px #fff}
+  #endBox .story{color:#4a3f26}
+</style>
+</head>
+<body>
+
+<div id="title" class="overlay">
+  <h1>BOOMESH RISING</h1>
+  <!-- [HUMAN] rewrite this intro story in your own words -->
+  <p class="story">The sorcerer Boomesh tore the world into three dark dimensions: Padhalulagam, Pushpalogam and Mayalogam.
+  Muthu, Mani and Align are the last light. Find every hint, solve every altar, and destroy him.
+  But beware: if you fall, the darkness drags you back to the dimension before.</p>
+  <div id="heroes"></div>
+  <p class="small">Move: WASD &nbsp;|&nbsp; Look: drag mouse or arrow keys &nbsp;|&nbsp; Sprint: Shift &nbsp;|&nbsp; Jump: Space &nbsp;|&nbsp; Attack: F or click &nbsp;|&nbsp; Interact: E<br>
+  Desktop browser recommended (Chrome / Edge).</p>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="hudL">
+    <div id="dimName"></div>
+    <div class="bar"><div id="hpFill"></div></div>
+    <div class="bar sm"><div id="stFill"></div></div>
+    <div id="hintList"></div>
+    <div id="objective"></div>
+  </div>
+  <div id="hudR"><div id="compass"><div id="arrow">&#9650;</div></div><div id="signal"></div></div>
+  <div id="bossBar" class="hidden"><div>BOOMESH</div><div class="bar"><div id="bossFill"></div></div></div>
+  <div id="toast"></div>
+  <div id="controls">WASD move | Shift sprint | Space jump | F / click attack | E interact | M music on/off | drag mouse to look</div>
+  <div id="dimTitle"><h2></h2><p></p></div>
+  <div id="hurt"></div>
+</div>
+
+<div id="codeBox" class="overlay hidden">
+  <div class="panel">
+    <h2>THE ALTAR LOCK</h2>
+    <div>Three digits will open the way. Use the hints you found.</div>
+    <div id="codeHints"></div>
+    <div class="digits"><input id="d0" maxlength="1" inputmode="numeric"><input id="d1" maxlength="1" inputmode="numeric"><input id="d2" maxlength="1" inputmode="numeric"></div>
+    <button id="codeGo">Unlock</button><button id="codeCancel">Step back</button>
+  </div>
+</div>
+
+<div id="dead" class="overlay hidden"><h1>YOU FELL</h1><p class="story" id="deadMsg"></p></div>
+
+<div id="endBox" class="overlay hidden">
+  <h1>THE LIGHT RETURNS</h1>
+  <!-- [HUMAN] rewrite the ending in your own words -->
+  <p class="story">Boomesh shatters into a thousand sparks. For the first time in the three worlds, the sky is bright.
+  Muthu, Mani and Align stand together in the warm light. You fell, you rose, you bounced back.</p>
+  <p class="story" id="endStats"></p>
+  <button onclick="location.reload()">Play again</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   1. SETTINGS  -  [HUMAN] change these numbers to change the difficulty
+   ===================================================================== */
+const CFG = {
+  world: 58,          // half-size of each dimension (bigger = more free world)
+  gravity: 30,
+  jumpV: 11,
+  sprintMul: 1.55,
+  staminaMax: 100, staminaDrain: 32, staminaRegen: 16,
+  camDist: 9,
+  attackRange: 3.4, attackCd: 0.45,
+  hintsNeeded: 3,
+  hintSenseRange: 28, // how far you see a hint's light beam (Align sees double)
+  wrongCodeDamage: 18,
+  bossHP: 14, crystalHP: 4
+};
+
+/* =====================================================================
+   2. HEROES  -  [HUMAN] rename, recolor, change stats and abilities
+   ===================================================================== */
+const HEROES = {
+  muthu: { name: 'Muthu', shirt: 0xff8c1a, hair: 0x1a1008, hp: 130, speed: 7.0, sense: 1, scale: 1.1, blurb: 'The strong one. Extra health.' },
+  mani:  { name: 'Mani',  shirt: 0x2ecc71, hair: 0x2b1b0e, hp: 100, speed: 8.6, sense: 1, scale: 1.0, blurb: 'The fast one. Outruns shadows.' },
+  align: { name: 'Align', shirt: 0x3b82f6, hair: 0x111111, hp: 100, speed: 7.2, sense: 2, scale: 1.0, blurb: 'The clever one. Senses hints from far away and has a hint compass.' }
+};
+
+/* =====================================================================
+   3. THE THREE DIMENSIONS  -  [HUMAN] your story, riddles and codes live here
+   ===================================================================== */
+const DIMS = [
+  {
+    name: 'PADHALULAGAM', sub: 'The Underworld',
+    bg: 0x0b0302, fog: 0.030, ground: 0x1d0e0a, amb: 0x662211, ambI: 0.7, accent: 0xff5a1f,
+    enemyColor: 0xff3300, enemies: 6, eSpeed: 4.3, eDmg: 12, eHP: 2,
+    prop: 'rock', hazard: 'lava', particle: 0xff7a2a,
+    intro: 'Lava rivers cut the dark. Shadow wraiths hunt anything that glows.',
+    hints: [
+      'Muthu, Mani and Align walk together. The FIRST digit is the number of heroes.',
+      'A spider has 8 legs. Boomesh cut half of them off. The SECOND digit is what remains.',
+      'Seven days make a week. The lava rose on the LAST day. That day is the THIRD digit.'
+    ],
+    code: [3, 4, 7]
+  },
+  {
+    name: 'PUSHPALOGAM', sub: 'The Poisoned Garden',
+    bg: 0x020a0a, fog: 0.032, ground: 0x0b1f1a, amb: 0x116655, ambI: 0.7, accent: 0x39ffb0,
+    enemyColor: 0x9b30ff, enemies: 8, eSpeed: 5.0, eDmg: 14, eHP: 2,
+    prop: 'flower', hazard: 'spore', particle: 0x7affc8,
+    intro: 'The giant flowers pulse with poison. Jump over the shockwaves!',
+    hints: [
+      'The first flower to bloom has six petals. The FIRST digit is its petals.',
+      'Only one moon watches this garden. The SECOND digit is the number of moons.',
+      'Turn the number 6 upside down. The THIRD digit is what you see.'
+    ],
+    code: [6, 1, 9]
+  },
+  {
+    name: 'MAYALOGAM', sub: 'The World of Illusion',
+    bg: 0x07020f, fog: 0.035, ground: 0x15092a, amb: 0x442288, ambI: 0.75, accent: 0xb266ff,
+    enemyColor: 0xff2a6d, enemies: 8, eSpeed: 5.6, eDmg: 15, eHP: 3,
+    prop: 'crystal', hazard: 'illusion', particle: 0xc9a0ff,
+    intro: 'Not every light is real. Real light never flickers.',
+    hints: [
+      'Illusions come in pairs: a mirror and its reflection. The FIRST digit is a pair.',
+      'Half of ten shadows hide the truth. The SECOND digit is that half.',
+      'Boomesh has four arms. The mirror doubles them. The THIRD digit is the arms you see in the mirror.'
+    ],
+    code: [2, 5, 8]
+  }
+];
+
+const SPAWN = { x: 0, z: 42 };
+const ALTAR = { x: 0, z: -46 };
+
+/* =====================================================================
+   4. SETUP
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 220);
+const ambient = new THREE.AmbientLight(0x444466, 0.6); scene.add(ambient);
+const moon = new THREE.DirectionalLight(0x7788bb, 0.4); moon.position.set(-20, 40, 10); scene.add(moon);
+const torch = new THREE.PointLight(0xffe2b0, 1.5, 26, 1.6); scene.add(torch);
+
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const lerp = (a, b, t) => a + (b - a) * t;
+function lerpAngle(a, b, t) { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * t; }
+const L = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0x000000 });
+const B = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: o !== undefined, opacity: o === undefined ? 1 : o, fog: false, depthWrite: o === undefined });
+
+/* =====================================================================
+   5. 3D CHARACTERS (built from simple shapes)  -  [HUMAN] redesign them!
+   ===================================================================== */
+function makeHuman(shirt, hair, scale) {
+  const g = new THREE.Group();
+  const skin = L(0xe0ac84), shirtM = L(shirt), pants = L(0x222233), hairM = L(hair);
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.45), shirtM); torso.position.y = 1.5; g.add(torso);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), skin); head.position.y = 2.3; g.add(head);
+  const hairMesh = new THREE.Mesh(new THREE.SphereGeometry(0.36, 16, 12, 0, Math.PI * 2, 0, Math.PI / 1.9), hairM); hairMesh.position.y = 2.34; g.add(hairMesh);
+  for (const s of [-1, 1]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), L(0x111111)); eye.position.set(0.12 * s, 2.33, 0.31); g.add(eye); }
+  function limb(w, h, mat, x, y) { const piv = new THREE.Group(); piv.position.set(x, y, 0); const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat); m.position.y = -h / 2; piv.add(m); g.add(piv); return piv; }
+  const legL = limb(0.32, 1.0, pants, -0.2, 1.0), legR = limb(0.32, 1.0, pants, 0.2, 1.0);
+  const armL = limb(0.24, 0.95, shirtM, -0.55, 1.95), armR = limb(0.24, 0.95, shirtM, 0.55, 1.95);
+  g.userData = { legL, legR, armL, armR };
+  g.scale.setScalar(scale || 1);
+  return g;
+}
+
+function makeWraith(color) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.8, 14, 12), new THREE.MeshLambertMaterial({ color: 0x050508, emissive: color, emissiveIntensity: 0.25 }));
+  body.scale.set(1, 1.3, 1); g.add(body);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.6, 10), L(0x050508, color)); tail.rotation.x = Math.PI; tail.position.y = -1.2; g.add(tail);
+  for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), B(color)); e.position.set(0.28 * s, 0.25, 0.68); g.add(e); }
+  return g;
+}
+
+function makeBoomesh() {
+  const g = new THREE.Group();
+  const dark = L(0x0c0610, 0x1a0020);
+  const robe = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.8, 10), dark); robe.position.y = 1.4; g.add(robe);
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 1.2, 10), dark); torso.position.y = 3.0; g.add(torso);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 12), L(0x2a2030)); head.position.y = 3.9; g.add(head);
+  for (const s of [-1, 1]) {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.8, 6), L(0x111111)); horn.position.set(0.35 * s, 4.45, 0); horn.rotation.z = -0.4 * s; g.add(horn);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), B(0xff2244)); eye.position.set(0.2 * s, 3.95, 0.43); g.add(eye);
+    const a1 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.4, 0.22), dark); a1.position.set(1.0 * s, 3.0, 0.2); a1.rotation.z = 0.6 * s; g.add(a1);
+    const a2 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.2, 0.22), dark); a2.position.set(0.95 * s, 2.35, 0.3); a2.rotation.z = 0.95 * s; g.add(a2);
+  }
+  const shield = new THREE.Mesh(new THREE.SphereGeometry(2.9, 24, 16), B(0xaa66ff, 0.28)); shield.position.y = 2.6; g.add(shield);
+  const light = new THREE.PointLight(0xff2244, 1.6, 26); light.position.y = 3.8; g.add(light);
+  g.userData = { shield, light };
+  g.scale.setScalar(1.15);
+  return g;
+}
+
+/* =====================================================================
+   5b. BACKGROUND MUSIC + SOUND EFFECTS (made with code, no audio files needed)
+   [HUMAN] change the notes, volumes and speeds below to make the music yours
+   ===================================================================== */
+const AUDIO = (() => {
+  let ctx = null, master = null, droneGain = null, filt = null, delay = null;
+  let melodyTimer = null, beatTimer = null, muted = false, dim = 0, mode = 'calm';
+  const oscs = [];
+  // [HUMAN] root note (Hz) and scale (semitone steps) for each dimension
+  const ROOTS = [55, 61.74, 49];
+  const SCALES = [[0, 1, 5, 7, 8], [0, 2, 3, 7, 9], [0, 1, 3, 6, 7]];
+  const hz = (root, semi, mul) => root * Math.pow(2, semi / 12) * mul;
+
+  function start() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = muted ? 0 : 0.55; master.connect(ctx.destination);
+    // echo that follows the melody notes
+    delay = ctx.createDelay(1.5); delay.delayTime.value = 0.55;
+    const fb = ctx.createGain(); fb.gain.value = 0.45; delay.connect(fb); fb.connect(delay);
+    const wet = ctx.createGain(); wet.gain.value = 0.5; delay.connect(wet); wet.connect(master);
+    // drone: two slightly detuned saw waves + a deep sine, through a slowly moving filter
+    filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 280; filt.Q.value = 4;
+    droneGain = ctx.createGain(); droneGain.gain.value = 0.2; filt.connect(droneGain); droneGain.connect(master);
+    [['sawtooth', 1, -6], ['sawtooth', 1.005, 6], ['sine', 0.5, 0]].forEach(([type, mul, det]) => {
+      const o = ctx.createOscillator(); o.type = type; o.detune.value = det; o.frequency.value = ROOTS[dim] * mul; o.connect(filt); o.start(); oscs.push({ o, mul });
+    });
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07; const lg = ctx.createGain(); lg.gain.value = 160; lfo.connect(lg); lg.connect(filt.frequency); lfo.start();
+    // wind: looping noise through a moving band-pass filter
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const ns = ctx.createBufferSource(); ns.buffer = buf; ns.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 500; bp.Q.value = 0.8;
+    const wg = ctx.createGain(); wg.gain.value = 0.05; ns.connect(bp); bp.connect(wg); wg.connect(master); ns.start();
+    const l2 = ctx.createOscillator(); l2.frequency.value = 0.11; const l2g = ctx.createGain(); l2g.gain.value = 300; l2.connect(l2g); l2g.connect(bp.frequency); l2.start();
+    scheduleMelody(); scheduleBeat();
+  }
+  function note(freq, dur, vol, type) {
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'triangle'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master); g.connect(delay); o.start(t); o.stop(t + dur + 0.1);
+  }
+  function scheduleMelody() {
+    clearTimeout(melodyTimer);
+    if (mode !== 'win') {
+      const sc = SCALES[dim], semi = sc[Math.floor(Math.random() * sc.length)], boss = mode === 'boss';
+      note(hz(ROOTS[dim], semi, boss ? 8 : 4), 2.4, boss ? 0.07 : 0.05);
+    }
+    melodyTimer = setTimeout(scheduleMelody, mode === 'boss' ? 500 + Math.random() * 400 : 2200 + Math.random() * 2600);
+  }
+  function thump() {
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.25);
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.35);
+  }
+  function scheduleBeat() {
+    clearTimeout(beatTimer);
+    if (mode === 'boss') { thump(); setTimeout(() => { if (mode === 'boss') thump(); }, 180); }
+    beatTimer = setTimeout(scheduleBeat, mode === 'boss' ? 700 : 1500);
+  }
+  function setDim(i) {
+    dim = i; mode = 'calm';
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    oscs.forEach(({ o, mul }) => o.frequency.setTargetAtTime(ROOTS[i] * mul, now, 1.5));
+    droneGain.gain.setTargetAtTime(0.2, now, 1);
+  }
+  function setMode(m) {
+    mode = m;
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    if (m === 'boss') droneGain.gain.setTargetAtTime(0.32, now, 1);
+    if (m === 'win') {
+      droneGain.gain.setTargetAtTime(0.0, now, 2.5);
+      [261.63, 329.63, 392, 523.25, 659.25].forEach((f, k) => setTimeout(() => note(f, 7, 0.09, 'sine'), k * 500)); // bright C major chord = the light
+    }
+  }
+  function sfx(name) {
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(master);
+    if (name === 'swing') { o.type = 'sawtooth'; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.12); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15); o.start(t); o.stop(t + 0.18); }
+    else if (name === 'hit') { o.type = 'square'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(50, t + 0.2); g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.start(t); o.stop(t + 0.3); }
+    else if (name === 'ping') { o.type = 'sine'; o.frequency.setValueAtTime(660, t); o.frequency.exponentialRampToValueAtTime(1320, t + 0.15); g.gain.setValueAtTime(0.15, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7); o.start(t); o.stop(t + 0.75); }
+    else if (name === 'die') { o.type = 'sawtooth'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(35, t + 1.2); g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4); o.start(t); o.stop(t + 1.5); }
+  }
+  function toggle() {
+    muted = !muted;
+    if (master) master.gain.setTargetAtTime(muted ? 0 : 0.55, ctx.currentTime, 0.1);
+    toast(muted ? 'Music off (press M to turn it on)' : 'Music on', 2);
+  }
+  return { start, setDim, setMode, sfx, toggle };
+})();
+
+/* =====================================================================
+   6. GAME STATE
+   ===================================================================== */
+let state = 'title';        // title | play | code | dead | win
+let hero = null, heroKey = '';
+let dimIndex = 0, world = null, W = null;
+let camYaw = 0, camPitch = 0.45;
+let deaths = 0, winT = 0, wantAttack = false, hurtFlash = 0, toastTimer = null;
+const keys = {};
+const comps = [];
+const P = { pos: new THREE.Vector3(), vy: 0, kb: new THREE.Vector3(), hp: 100, maxHp: 100, stamina: 100, inv: 0, atkCd: 0, swing: 0, face: 0, onGround: true, walk: 0, mesh: null };
+
+function toast(msg, secs) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), (secs || 4) * 1000);
+}
+function showDimTitle(d) {
+  const el = $('dimTitle'); el.querySelector('h2').textContent = d.name; el.querySelector('p').textContent = d.sub + ' - ' + d.intro;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+
+/* =====================================================================
+   7. BUILDING A DIMENSION
+   ===================================================================== */
+function randPos(rng, avoid, gap) {
+  for (let i = 0; i < 60; i++) {
+    const x = (rng() * 2 - 1) * (CFG.world - 5), z = (rng() * 2 - 1) * (CFG.world - 5);
+    if (Math.hypot(x - SPAWN.x, z - SPAWN.z) < 11 || Math.hypot(x - ALTAR.x, z - ALTAR.z) < 10) continue;
+    let ok = true;
+    for (const a of avoid) if (Math.hypot(x - a.x, z - a.z) < (a.r || 0) + gap) { ok = false; break; }
+    if (ok) return { x, z };
+  }
+  return null;
+}
+function nearObj(o, dist, rng) {
+  const a = rng() * Math.PI * 2, d = (o.r || 1) + dist;
+  return { x: Math.max(-CFG.world + 4, Math.min(CFG.world - 4, o.x + Math.cos(a) * d)), z: Math.max(-CFG.world + 4, Math.min(CFG.world - 4, o.z + Math.sin(a) * d)) };
+}
+function makeOrb(color) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 1), B(color)));
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(0.95, 14, 10), B(color, 0.22)));
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 34, 8, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, side: THREE.DoubleSide, fog: false, depthWrite: false }));
+  beam.position.y = 17; g.add(beam); g.userData.beam = beam;
+  return g;
+}
+
+function loadDimension(i) {
+  dimIndex = i;
+  const d = DIMS[i];
+  if (world) scene.remove(world);
+  world = new THREE.Group(); scene.add(world);
+  scene.background = new THREE.Color(d.bg);
+  scene.fog = new THREE.FogExp2(d.bg, d.fog);
+  ambient.color.set(d.amb); ambient.intensity = d.ambI;
+  const rng = mulberry32(1000 + i * 77);
+  W = { d, rng, t: 0, colliders: [], enemies: [], hints: [], decoys: [], heals: [], lava: [], flowers: [], waves: [], projs: [], fx: [], collected: 0, texts: [], solved: false, portal: null, altar: null, boss: null, crystals: [], bossSpawnT: 0 };
+
+  // ground
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), L(d.ground)); ground.rotation.x = -Math.PI / 2; world.add(ground);
+  const grid = new THREE.GridHelper(150, 75, d.accent, d.accent); grid.material.transparent = true; grid.material.opacity = 0.12; grid.position.y = 0.02; world.add(grid);
+
+  const avoid = [];
+
+  // hazards
+  if (d.hazard === 'lava') {
+    for (let k = 0; k < 9; k++) {
+      const r = 2.8 + rng() * 2.6, p = randPos(rng, avoid, 6); if (!p) continue;
+      const mesh = new THREE.Mesh(new THREE.CircleGeometry(r, 32), new THREE.MeshBasicMaterial({ color: 0xff4a10 })); mesh.rotation.x = -Math.PI / 2; mesh.position.set(p.x, 0.04, p.z); world.add(mesh);
+      const o = { x: p.x, z: p.z, r, mesh }; W.lava.push(o); avoid.push(o);
+    }
+  }
+  if (d.hazard === 'spore') {
+    for (let k = 0; k < 6; k++) {
+      const p = randPos(rng, avoid, 12); if (!p) continue;
+      const g = new THREE.Group();
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 3.2, 8), L(0x114433)); stem.position.y = 1.6; g.add(stem);
+      const capMat = L(0x220033, 0xff3fa0);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(1.7, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), capMat); cap.position.y = 3.1; g.add(cap);
+      g.position.set(p.x, 0, p.z); world.add(g);
+      const o = { x: p.x, z: p.z, r: 1.3, t: rng() * 4.6, period: 4.6, capMat }; W.flowers.push(o); avoid.push(o); W.colliders.push({ x: p.x, z: p.z, r: 1.3 });
+    }
+  }
+
+  // hints (placed near hazards so they are risky to reach)
+  for (let k = 0; k < CFG.hintsNeeded; k++) {
+    let p = null;
+    if (k < 2 && W.lava.length) p = nearObj(W.lava[Math.floor(rng() * W.lava.length)], 2.4, rng);
+    else if (k < 2 && W.flowers.length) p = nearObj(W.flowers[Math.floor(rng() * W.flowers.length)], 6, rng);
+    if (!p) p = randPos(rng, avoid, 22);
+    if (!p) p = { x: -30 + k * 30, z: 0 };
+    const orb = makeOrb(0xffd35a); orb.position.set(p.x, 1.4, p.z); world.add(orb);
+    W.hints.push({ x: p.x, z: p.z, orb, got: false, text: d.hints[k] }); avoid.push({ x: p.x, z: p.z, r: 3 });
+  }
+  if (d.hazard === 'illusion') {
+    for (let k = 0; k < 6; k++) {
+      const p = randPos(rng, avoid, 7); if (!p) continue;
+      const orb = makeOrb(0xff6a88); orb.position.set(p.x, 1.4, p.z); world.add(orb);
+      W.decoys.push({ x: p.x, z: p.z, orb }); avoid.push({ x: p.x, z: p.z, r: 3 });
+    }
+  }
+  for (let k = 0; k < 3; k++) {
+    const p = randPos(rng, avoid, 10); if (!p) continue;
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.55), B(0x55ff88)); m.position.set(p.x, 1.2, p.z); world.add(m);
+    W.heals.push({ x: p.x, z: p.z, m }); avoid.push({ x: p.x, z: p.z, r: 2 });
+  }
+
+  // scenery props
+  const rockM = L(0x2a1a15, 0x220800), stemM = L(0x0e3328), capM = L(0x120022, 0x6a1fa0), crysM = new THREE.MeshLambertMaterial({ color: 0x5a2aa0, emissive: 0x2a0a70, transparent: true, opacity: 0.8 });
+  for (let k = 0; k < 120; k++) {
+    const p = randPos(rng, avoid, 3); if (!p) continue;
+    let r = 0.9, m;
+    if (d.prop === 'rock') { const h = 1.5 + rng() * 4.5; m = new THREE.Mesh(new THREE.ConeGeometry(0.6 + rng() * 0.9, h, 6), rockM); m.position.set(p.x, h / 2, p.z); }
+    else if (d.prop === 'flower') { m = new THREE.Group(); const h = 1.5 + rng() * 3; const s = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, h, 6), stemM); s.position.y = h / 2; const c = new THREE.Mesh(new THREE.SphereGeometry(0.8 + rng() * 0.5, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capM); c.position.y = h; m.add(s, c); m.position.set(p.x, 0, p.z); r = 0.5; }
+    else { const h = 2 + rng() * 5; m = new THREE.Mesh(new THREE.OctahedronGeometry(0.8 + rng() * 0.6), crysM); m.scale.y = h / 1.2; m.position.set(p.x, h * 0.55, p.z); m.rotation.y = rng() * 3; }
+    world.add(m); W.colliders.push({ x: p.x, z: p.z, r });
+  }
+
+  // drifting particles (ash / pollen / glitch)
+  const pts = []; for (let k = 0; k < 700; k++) pts.push((Math.random() * 2 - 1) * 70, Math.random() * 28, (Math.random() * 2 - 1) * 70);
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const points = new THREE.Points(pg, new THREE.PointsMaterial({ color: d.particle, size: 0.28, transparent: true, opacity: 0.7, fog: false }));
+  world.add(points); W.points = points;
+
+  // altar + christmas-light string (Stranger Things nod)
+  const ag = new THREE.Group(); ag.position.set(ALTAR.x, 0, ALTAR.z);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 3.2, 0.7, 20), L(0x222222)); base.position.y = 0.35; ag.add(base);
+  for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.78; const pl = new THREE.Mesh(new THREE.BoxGeometry(0.6, 3.4, 0.6), L(0x181818)); pl.position.set(Math.cos(a) * 2.2, 1.7, Math.sin(a) * 2.2); ag.add(pl); }
+  const aorb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7, 1), B(0x555555)); aorb.position.y = 3.2; ag.add(aorb);
+  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 80, 12, 1, true), new THREE.MeshBasicMaterial({ color: d.accent, transparent: true, opacity: 0.3, side: THREE.DoubleSide, fog: false, depthWrite: false })); beacon.position.y = 40; beacon.visible = false; ag.add(beacon);
+  const bulbs = [], cols = [0xff3333, 0x33ff66, 0x3399ff, 0xffdd33, 0xff66cc];
+  for (let k = 0; k < 16; k++) { const a = Math.PI * (k / 15); const b = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), B(cols[k % 5])); b.position.set(Math.cos(a) * 9, 4 + Math.sin(a * 2) * 0.8, -5 - Math.sin(a) * 2); ag.add(b); bulbs.push(b); }
+  const alight = new THREE.PointLight(d.accent, 1.2, 32); alight.position.y = 4; ag.add(alight);
+  world.add(ag); W.altar = { g: ag, orb: aorb, beacon, bulbs }; W.colliders.push({ x: ALTAR.x, z: ALTAR.z, r: 3.1 });
+
+  // enemies
+  for (let k = 0; k < d.enemies; k++) {
+    let p = null; for (let t = 0; t < 30; t++) { const q = randPos(rng, [], 0); if (q && Math.hypot(q.x - SPAWN.x, q.z - SPAWN.z) > 22) { p = q; break; } }
+    if (!p) continue;
+    addEnemy(p.x, p.z, rng);
+  }
+
+  // reset player
+  P.pos.set(SPAWN.x, 0, SPAWN.z); P.vy = 0; P.kb.set(0, 0, 0); P.inv = 1; camYaw = 0;
+  comps.forEach((c, n) => { c.x = SPAWN.x + (n ? 2 : -2); c.z = SPAWN.z + 3; });
+  $('dimName').textContent = d.name;
+  $('bossBar').classList.add('hidden');
+  updateHintHud();
+  AUDIO.setDim(i);
+  showDimTitle(d);
+}
+
+function addEnemy(x, z, rng) {
+  const d = W.d, m = makeWraith(d.enemyColor); world.add(m);
+  W.enemies.push({ x, z, mesh: m, hp: d.eHP, speed: d.eSpeed * (0.9 + (rng ? rng() : Math.random()) * 0.25), cd: 0, kx: 0, kz: 0, wa: Math.random() * 6.28, wt: 0, ph: Math.random() * 6 });
+}
+
+/* =====================================================================
+   8. COMBAT, WAVES, DEATH
+   ===================================================================== */
+function hurt(a, discrete, flash) {
+  if (state !== 'play') return;
+  if (discrete) { if (P.inv > 0) return; P.inv = 0.4; }
+  if (discrete) AUDIO.sfx('hit');
+  P.hp -= a; hurtFlash = Math.max(hurtFlash, flash === undefined ? 0.55 : flash);
+  if (P.hp <= 0) { P.hp = 0; die(); }
+}
+function spawnFx(x, y, z, color) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.6, 10, 8), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7 }));
+  m.position.set(x, y, z); world.add(m); W.fx.push({ m, life: 0.25, max: 0.25 });
+}
+function spawnWave(x, z, max, speed, dmg, color) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 8, 56), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, fog: false }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.25, z); world.add(m);
+  W.waves.push({ x, z, r: 0.5, max, speed, dmg, hit: false, m });
+}
+function spawnProj(x, y, z, tx, tz, color) {
+  const dx = tx - x, dz = tz - z, l = Math.hypot(dx, dz) || 1;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), B(color)); m.position.set(x, y, z); world.add(m);
+  W.projs.push({ m, vx: dx / l * 12, vz: dz / l * 12, life: 5 });
+}
+function die() {
+  if (state !== 'play') return;
+  state = 'dead'; deaths++; AUDIO.sfx('die');
+  const back = Math.max(0, dimIndex - 1);
+  // [HUMAN] change this death message
+  $('deadMsg').textContent = dimIndex === 0
+    ? 'The underworld swallows you. You wake at the start of ' + DIMS[0].name + '.'
+    : 'Boomesh\'s darkness drags you back into ' + DIMS[back].name + '. Complete its challenges again to return.';
+  $('dead').classList.remove('hidden');
+  setTimeout(() => { $('dead').classList.add('hidden'); P.hp = P.maxHp; P.stamina = CFG.staminaMax; loadDimension(back); state = 'play'; }, 3400);
+}
+function doAttack() {
+  P.atkCd = CFG.attackCd; P.swing = 0.25; AUDIO.sfx('swing');
+  const fx = Math.sin(P.face), fz = Math.cos(P.face);
+  spawnFx(P.pos.x + fx * 1.6, 1.4, P.pos.z + fz * 1.6, hero.shirt);
+  for (const e of W.enemies) {
+    const dx = e.x - P.pos.x, dz = e.z - P.pos.z, dist = Math.hypot(dx, dz);
+    if (dist < CFG.attackRange && (dx * fx + dz * fz) / (dist || 1) > 0.2) {
+      e.hp--; e.kx = dx / (dist || 1) * 14; e.kz = dz / (dist || 1) * 14;
+      if (e.hp <= 0) { world.remove(e.mesh); spawnFx(e.x, 1.3, e.z, W.d.enemyColor); }
+    }
+  }
+  W.enemies = W.enemies.filter(e => e.hp > 0);
+  for (const c of W.crystals) {
+    if (c.hp > 0 && Math.hypot(c.x - P.pos.x, c.z - P.pos.z) < CFG.attackRange + 1.2) {
+      c.hp--; spawnFx(c.x, 2, c.z, 0xcc88ff);
+      if (c.hp <= 0) { world.remove(c.mesh); const left = W.crystals.filter(q => q.hp > 0).length; if (left === 0) { W.boss.shield = false; W.boss.mesh.userData.shield.visible = false; toast('The shield shatters! Strike Boomesh now!', 5); } else toast('Maya crystal destroyed. ' + left + ' left.', 2.5); }
+    }
+  }
+  const b = W.boss;
+  if (b && b.hp > 0 && Math.hypot(b.x - P.pos.x, b.z - P.pos.z) < CFG.attackRange + 2.2) {
+    if (b.shield) toast('Boomesh is shielded! Destroy the Maya crystals first.', 2.5);
+    else { b.hp--; spawnFx(b.x, 3, b.z, 0xffffff); if (b.hp <= 0) startWin(); }
+  }
+}
+
+/* =====================================================================
+   9. HINTS, ALTAR, PORTAL, BOSS
+   ===================================================================== */
+function updateHintHud() {
+  let s = 'Hints: ' + W.collected + ' / ' + CFG.hintsNeeded;
+  W.texts.forEach((t, i) => { s += '<br>' + (i + 1) + '. ' + t; });
+  $('hintList').innerHTML = s;
+}
+function objectiveText() {
+  if (W.boss) return W.boss.shield ? 'Destroy the 3 Maya crystals!' : 'Defeat Boomesh!';
+  if (W.solved) return 'Enter the glowing portal.';
+  if (W.collected < CFG.hintsNeeded) return 'Explore the world and find the hints (' + W.collected + '/' + CFG.hintsNeeded + ').';
+  return 'Go to the altar and press E to enter the code.';
+}
+function openCode() {
+  state = 'code';
+  $('codeHints').innerHTML = W.texts.map((t, i) => (i + 1) + '. ' + t).join('<br>');
+  ['d0', 'd1', 'd2'].forEach(id => $(id).value = '');
+  $('codeBox').classList.remove('hidden'); $('d0').focus();
+}
+function closeCode() { $('codeBox').classList.add('hidden'); state = 'play'; }
+function trySolve() {
+  const code = [$('d0').value, $('d1').value, $('d2').value].join('');
+  if (code === W.d.code.join('')) {
+    closeCode(); W.solved = true; W.altar.orb.material.color.set(W.d.accent);
+    if (dimIndex < 2) {
+      const g = new THREE.Group(); g.position.set(ALTAR.x + 9, 0, ALTAR.z + 4);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.22, 12, 40), B(W.d.accent)); ring.position.y = 2.6; g.add(ring);
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(2.1, 32), B(0xffffff, 0.35)); disc.position.y = 2.6; g.add(disc);
+      const pl = new THREE.PointLight(W.d.accent, 1.5, 30); pl.position.y = 2.6; g.add(pl);
+      world.add(g); W.portal = { g, ring, x: g.position.x, z: g.position.z };
+      toast('The altar opens! A portal appears beside it.', 5);
+    } else startBoss();
+  } else {
+    hurt(CFG.wrongCodeDamage, false); closeCode(); toast('Wrong code! The altar shocks you.', 3.5);
+  }
+}
+function startBoss() {
+  const m = makeBoomesh(); m.position.set(ALTAR.x, 0, ALTAR.z - 6); world.add(m);
+  W.boss = { mesh: m, x: ALTAR.x, z: ALTAR.z - 6, hp: CFG.bossHP, shield: true, orbT: 2.5, slamT: 6, melee: 0 };
+  for (let k = 0; k < 3; k++) {
+    const a = k * Math.PI * 2 / 3 + 0.5, x = ALTAR.x + Math.cos(a) * 15, z = ALTAR.z + Math.sin(a) * 15;
+    const c = new THREE.Mesh(new THREE.OctahedronGeometry(1.3), new THREE.MeshLambertMaterial({ color: 0xaa66ff, emissive: 0xaa44ff, emissiveIntensity: 0.9 }));
+    c.scale.y = 1.8; c.position.set(x, 2.2, z); world.add(c); W.crystals.push({ mesh: c, x, z, hp: CFG.crystalHP });
+  }
+  $('bossBar').classList.remove('hidden'); AUDIO.setMode('boss');
+  // [HUMAN] write Boomesh's speech in your own words
+  toast('BOOMESH: "You cannot hurt what hides behind illusions!"', 6);
+}
+function startWin() {
+  state = 'win'; winT = 0; AUDIO.setMode('win'); $('bossBar').classList.add('hidden');
+  W.winLight = new THREE.PointLight(0xffffff, 0, 160); W.winLight.position.set(ALTAR.x, 12, ALTAR.z); world.add(W.winLight);
+  toast('Boomesh falls... and the light begins to return.', 6);
+}
+
+/* =====================================================================
+   10. UPDATE LOOP
+   ===================================================================== */
+function updatePlayer(dt) {
+  const k = keys;
+  if (k['ArrowLeft']) camYaw -= 1.9 * dt;
+  if (k['ArrowRight']) camYaw += 1.9 * dt;
+  const ix = (k['KeyD'] ? 1 : 0) - (k['KeyA'] ? 1 : 0), iz = (k['KeyW'] ? 1 : 0) - (k['KeyS'] ? 1 : 0);
+  const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = Math.cos(camYaw), rz = -Math.sin(camYaw);
+  let dx = fx * iz + rx * ix, dz = fz * iz + rz * ix; const len = Math.hypot(dx, dz), moving = len > 0.01;
+  let sp = hero.speed, sprinting = false;
+  if (moving) {
+    dx /= len; dz /= len;
+    if ((k['ShiftLeft'] || k['ShiftRight']) && P.stamina > 4) { sp *= CFG.sprintMul; P.stamina -= CFG.staminaDrain * dt; sprinting = true; }
+    P.face = lerpAngle(P.face, Math.atan2(dx, dz), Math.min(1, 14 * dt));
+  }
+  if (!sprinting) P.stamina = Math.min(CFG.staminaMax, P.stamina + CFG.staminaRegen * dt);
+  P.pos.x += (moving ? dx * sp : 0) * dt + P.kb.x * dt; P.pos.z += (moving ? dz * sp : 0) * dt + P.kb.z * dt;
+  P.kb.multiplyScalar(Math.exp(-6 * dt));
+  if (k['Space'] && P.onGround) { P.vy = CFG.jumpV; P.onGround = false; }
+  P.vy -= CFG.gravity * dt; P.pos.y += P.vy * dt;
+  if (P.pos.y <= 0) { P.pos.y = 0; P.vy = 0; P.onGround = true; }
+  P.pos.x = Math.max(-CFG.world, Math.min(CFG.world, P.pos.x)); P.pos.z = Math.max(-CFG.world, Math.min(CFG.world, P.pos.z));
+  for (const c of W.colliders) {
+    const ox = P.pos.x - c.x, oz = P.pos.z - c.z, dd = Math.hypot(ox, oz), mn = c.r + 0.55;
+    if (dd < mn && dd > 0.001) { P.pos.x = c.x + ox / dd * mn; P.pos.z = c.z + oz / dd * mn; }
+  }
+  P.inv -= dt; P.atkCd -= dt; P.swing -= dt;
+  if (wantAttack && P.atkCd <= 0) doAttack();
+  wantAttack = false;
+  // animate body
+  if (moving) P.walk += dt * sp * 1.3;
+  const u = P.mesh.userData, sw = moving ? Math.sin(P.walk) * 0.9 : 0;
+  u.legL.rotation.x = sw; u.legR.rotation.x = -sw; u.armL.rotation.x = -sw * 0.8; u.armR.rotation.x = P.swing > 0 ? -1.7 : sw * 0.8;
+  P.mesh.position.copy(P.pos); P.mesh.rotation.y = P.face;
+  torch.position.set(P.pos.x, 3.2, P.pos.z);
+}
+
+function updateCompanions(dt) {
+  comps.forEach((c, n) => {
+    const side = n === 0 ? -1 : 1;
+    const tx = P.pos.x - Math.sin(P.face) * 3 + Math.cos(P.face) * side * 2.2, tz = P.pos.z - Math.cos(P.face) * 3 - Math.sin(P.face) * side * 2.2;
+    const ox = c.x, oz = c.z; c.x += (tx - c.x) * Math.min(1, 3 * dt); c.z += (tz - c.z) * Math.min(1, 3 * dt);
+    const moved = Math.hypot(c.x - ox, c.z - oz) / (dt || 1);
+    if (moved > 0.4) c.face = lerpAngle(c.face || 0, Math.atan2(c.x - ox, c.z - oz), Math.min(1, 10 * dt)); else c.face = lerpAngle(c.face || 0, P.face, Math.min(1, 4 * dt));
+    c.walk = (c.walk || 0) + dt * Math.min(moved, 9) * 1.3;
+    const u = c.mesh.userData, s = moved > 0.4 ? Math.sin(c.walk) * 0.9 : 0;
+    u.legL.rotation.x = s; u.legR.rotation.x = -s; u.armL.rotation.x = -s * 0.8; u.armR.rotation.x = s * 0.8;
+    c.mesh.position.set(c.x, 0, c.z); c.mesh.rotation.y = c.face;
+  });
+}
+
+function updateWorld(dt) {
+  W.t += dt;
+  const d = W.d, playing = state === 'play';
+  W.points.rotation.y += dt * 0.015; W.points.position.y = Math.sin(W.t * 0.3) * 0.8;
+  W.altar.orb.rotation.y += dt; W.altar.orb.position.y = 3.2 + Math.sin(W.t * 2) * 0.2;
+  W.altar.bulbs.forEach((b, i) => { b.scale.setScalar(0.75 + 0.35 * Math.abs(Math.sin(W.t * 2.2 + i * 1.7))); });
+  for (const f of W.fx) { f.life -= dt; f.m.scale.addScalar(dt * 8); f.m.material.opacity = Math.max(0, f.life / f.max * 0.7); }
+  W.fx = W.fx.filter(f => { if (f.life <= 0) { world.remove(f.m); return false; } return true; });
+  W.lava.forEach((l, i) => { l.mesh.material.color.setHSL(0.04 + 0.015 * Math.sin(W.t * 2 + i), 1, 0.5 + 0.08 * Math.sin(W.t * 3 + i)); });
+
+  // hint orbs, decoys, heals
+  const range = CFG.hintSenseRange * (hero ? hero.sense : 1);
+  for (const h of W.hints) {
+    if (h.got) continue;
+    h.orb.position.y = 1.4 + Math.sin(W.t * 2 + h.x) * 0.3; h.orb.rotation.y += dt;
+    const dist = Math.hypot(h.x - P.pos.x, h.z - P.pos.z);
+    h.orb.userData.beam.visible = dist < range;
+    if (playing && dist < 2.2) {
+      h.got = true; AUDIO.sfx('ping'); world.remove(h.orb); W.collected++; W.texts.push(h.text); updateHintHud();
+      toast('HINT ' + W.collected + '/' + CFG.hintsNeeded + ': ' + h.text, 9);
+      if (W.collected === CFG.hintsNeeded) { W.altar.beacon.visible = true; setTimeout(() => toast('All hints found! A light shows the altar. Go there and press E.', 5), 3000); }
+    }
+  }
+  for (const c of W.decoys) {
+    if (c.gone) continue;
+    const on = Math.random() > 0.35; c.orb.visible = on; c.orb.userData.beam.visible = on && Math.hypot(c.x - P.pos.x, c.z - P.pos.z) < range;
+    c.orb.position.y = 1.4 + Math.sin(W.t * 2 + c.x) * 0.3;
+    if (playing && Math.hypot(c.x - P.pos.x, c.z - P.pos.z) < 2.0) { c.gone = true; world.remove(c.orb); spawnWave(c.x, c.z, 7, 14, 0, 0xff6a88); hurt(25, false); toast('An illusion! It explodes.', 2.5); }
+  }
+  for (const h of W.heals) {
+    if (h.got) continue; h.m.rotation.y += dt * 2; h.m.position.y = 1.2 + Math.sin(W.t * 3 + h.x) * 0.2;
+    if (playing && Math.hypot(h.x - P.pos.x, h.z - P.pos.z) < 1.8) { h.got = true; world.remove(h.m); P.hp = Math.min(P.maxHp, P.hp + 35); toast('Health restored.', 1.5); }
+  }
+
+  // hazards
+  if (playing) for (const l of W.lava) if (P.pos.y < 0.5 && Math.hypot(l.x - P.pos.x, l.z - P.pos.z) < l.r) hurt(24 * dt, false, 0.3);
+  for (const f of W.flowers) {
+    f.t += dt; f.capMat.emissiveIntensity = 0.3 + 1.2 * (f.t / f.period);
+    if (f.t >= f.period) { f.t = 0; spawnWave(f.x, f.z, 12, 8, 18, 0x39ffb0); }
+  }
+
+  // waves
+  for (const w of W.waves) {
+    w.r += w.speed * dt; w.m.scale.set(w.r, w.r, w.r); w.m.material.opacity = Math.max(0, 0.9 * (1 - w.r / w.max));
+    if (playing && !w.hit && w.dmg > 0 && P.pos.y < 0.9 && Math.abs(Math.hypot(P.pos.x - w.x, P.pos.z - w.z) - w.r) < 1.0) { w.hit = true; hurt(w.dmg, true); P.kb.set((P.pos.x - w.x) * 0.5, 0, (P.pos.z - w.z) * 0.5); }
+  }
+  W.waves = W.waves.filter(w => { if (w.r > w.max) { world.remove(w.m); return false; } return true; });
+
+  // projectiles
+  for (const p of W.projs) {
+    p.m.position.x += p.vx * dt; p.m.position.z += p.vz * dt; p.life -= dt;
+    if (playing && Math.hypot(p.m.position.x - P.pos.x, p.m.position.z - P.pos.z) < 1.0 && Math.abs(p.m.position.y - (P.pos.y + 1.2)) < 1.4) { hurt(15, true); p.life = 0; }
+  }
+  W.projs = W.projs.filter(p => { if (p.life <= 0) { world.remove(p.m); return false; } return true; });
+
+  // enemies
+  for (const e of W.enemies) {
+    const dx = P.pos.x - e.x, dz = P.pos.z - e.z, dist = Math.hypot(dx, dz) || 1;
+    let vx, vz;
+    if (playing && dist < 26) { vx = dx / dist * e.speed; vz = dz / dist * e.speed; }
+    else { e.wt -= dt; if (e.wt <= 0) { e.wa = Math.random() * 6.28; e.wt = 2 + Math.random() * 3; } vx = Math.cos(e.wa) * 1.5; vz = Math.sin(e.wa) * 1.5; }
+    e.x += (vx + e.kx) * dt; e.z += (vz + e.kz) * dt; e.kx *= Math.exp(-6 * dt); e.kz *= Math.exp(-6 * dt);
+    e.x = Math.max(-CFG.world, Math.min(CFG.world, e.x)); e.z = Math.max(-CFG.world, Math.min(CFG.world, e.z));
+    e.mesh.position.set(e.x, 1.4 + Math.sin(W.t * 3 + e.ph) * 0.25, e.z); e.mesh.rotation.y = Math.atan2(dx, dz);
+    e.cd -= dt;
+    if (playing && dist < 1.7 && e.cd <= 0 && P.pos.y < 1.3) { hurt(d.eDmg, true); e.cd = 1.0; P.kb.set(-dx / dist * 9, 0, -dz / dist * 9); }
+  }
+
+  // boss
+  const b = W.boss;
+  if (b && b.hp > 0) {
+    const dx = P.pos.x - b.x, dz = P.pos.z - b.z, dist = Math.hypot(dx, dz) || 1;
+    b.mesh.rotation.y = Math.atan2(dx, dz);
+    b.mesh.userData.shield.visible = b.shield; b.mesh.userData.shield.rotation.y += dt;
+    $('bossFill').style.width = (b.hp / CFG.bossHP * 100) + '%';
+    if (playing) {
+      b.orbT -= dt; b.slamT -= dt; b.melee -= dt;
+      if (b.orbT <= 0) { b.orbT = b.shield ? 2.8 : 2.0; spawnProj(b.x, 2.4, b.z, P.pos.x, P.pos.z, 0xff2244); }
+      if (b.slamT <= 0) { b.slamT = b.shield ? 7 : 5.5; spawnWave(b.x, b.z, 20, 10, 25, 0xff2244); }
+      if (b.shield) {
+        W.bossSpawnT += dt;
+        if (W.bossSpawnT > 10 && W.enemies.length < 8) { W.bossSpawnT = 0; addEnemy(b.x + 4, b.z + 2); }
+      } else if (dist > 3.2) { b.x += dx / dist * 4.6 * dt; b.z += dz / dist * 4.6 * dt; b.mesh.position.set(b.x, 0, b.z); }
+      else if (b.melee <= 0) { b.melee = 1.3; hurt(22, true); P.kb.set(dx / dist * 12, 0, dz / dist * 12); }
+    }
+  }
+  for (const c of W.crystals) if (c.hp > 0) { c.mesh.rotation.y += dt; c.mesh.position.y = 2.2 + Math.sin(W.t * 2 + c.x) * 0.3; }
+
+  // portal
+  if (W.portal) {
+    W.portal.ring.rotation.z += dt;
+    if (playing && Math.hypot(W.portal.x - P.pos.x, W.portal.z - P.pos.z) < 2.4) { P.hp = Math.min(P.maxHp, P.hp + 35); loadDimension(dimIndex + 1); }
+  }
+}
+
+function updateWin(dt) {
+  winT += dt; const p = Math.min(1, winT / 6);
+  const white = new THREE.Color(0xfff2cc);
+  scene.background.copy(new THREE.Color(W.d.bg)).lerp(white, p); scene.fog.color.copy(scene.background); scene.fog.density = lerp(W.d.fog, 0.004, p);
+  ambient.color.set(0xffffff); ambient.intensity = lerp(W.d.ambI, 2.2, p); torch.intensity = lerp(1.5, 0.3, p);
+  if (W.winLight) W.winLight.intensity = lerp(0, 5, p);
+  W.boss.mesh.scale.setScalar(1.15 * (1 - p * 0.95)); W.boss.mesh.position.y = p * 6; if (p > 0.85) W.boss.mesh.visible = false;
+  if (p >= 1 && $('endBox').classList.contains('hidden')) {
+    $('endStats').textContent = 'Times you fell: ' + deaths + ' (' + HEROES[heroKey].name + ' led the way)';
+    $('endBox').classList.remove('hidden');
+  }
+}
+
+function updateHud() {
+  $('hpFill').style.width = (P.hp / P.maxHp * 100) + '%';
+  $('stFill').style.width = (P.stamina / CFG.staminaMax * 100) + '%';
+  $('objective').textContent = 'Goal: ' + objectiveText();
+  $('hurt').style.opacity = hurtFlash;
+  // signal / compass
+  let target = null, label = '';
+  if (W.boss) { label = ''; }
+  else if (W.collected >= CFG.hintsNeeded) { target = ALTAR; label = 'Altar: ' + Math.round(Math.hypot(ALTAR.x - P.pos.x, ALTAR.z - P.pos.z)) + ' m'; }
+  else {
+    let best = 1e9, bh = null; for (const h of W.hints) if (!h.got) { const dd = Math.hypot(h.x - P.pos.x, h.z - P.pos.z); if (dd < best) { best = dd; bh = h; } }
+    if (bh) { const eff = best / hero.sense; label = 'Hint signal: ' + (eff < 12 ? 'BURNING' : eff < 26 ? 'warm' : eff < 45 ? 'cool' : 'cold'); if (hero.sense > 1) target = bh; }
+  }
+  $('signal').textContent = label;
+  if (target) {
+    const dx = target.x - P.pos.x, dz = target.z - P.pos.z, fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = Math.cos(camYaw), rz = -Math.sin(camYaw);
+    $('arrow').style.transform = 'rotate(' + (Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz) * 180 / Math.PI) + 'deg)'; $('compass').style.visibility = 'visible';
+  } else $('compass').style.visibility = 'hidden';
+}
+
+let last = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (W && hero) {
+    if (state === 'play') updatePlayer(dt);
+    if (state === 'play' || state === 'win' || state === 'code') updateCompanions(dt);
+    if (state === 'play' || state === 'code' || state === 'win' || state === 'dead') updateWorld(dt);
+    if (state === 'win') updateWin(dt);
+    hurtFlash = Math.max(0, hurtFlash - dt * 1.4);
+    updateHud();
+    const cp = Math.cos(camPitch), target = new THREE.Vector3(P.pos.x + Math.sin(camYaw) * cp * CFG.camDist, P.pos.y + 1.8 + Math.sin(camPitch) * CFG.camDist, P.pos.z + Math.cos(camYaw) * cp * CFG.camDist);
+    camera.position.lerp(target, 1 - Math.exp(-12 * dt));
+    camera.lookAt(P.pos.x, P.pos.y + 1.8, P.pos.z);
+  }
+  renderer.render(scene, camera);
+}
+
+/* =====================================================================
+   11. INPUT + START
+   ===================================================================== */
+addEventListener('keydown', e => {
+  if (e.code === 'KeyM' && state !== 'code') AUDIO.toggle();
+  if (state === 'code') { if (e.code === 'Escape') closeCode(); if (e.code === 'Enter') trySolve(); return; }
+  if (state !== 'play') return;
+  if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+  keys[e.code] = true;
+  if (e.code === 'KeyF') wantAttack = true;
+  if (e.code === 'KeyE' && !e.repeat) {
+    if (!W.solved && !W.boss && Math.hypot(ALTAR.x - P.pos.x, ALTAR.z - P.pos.z) < 6) {
+      if (W.collected < CFG.hintsNeeded) toast('The altar is locked. Find all the hints first (' + W.collected + '/' + CFG.hintsNeeded + ').', 4);
+      else { e.preventDefault(); openCode(); }
+    }
+  }
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+let drag = null;
+renderer.domElement.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY, moved: 0 }; });
+addEventListener('mousemove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy); camYaw += dx * 0.006; camPitch = Math.max(0.12, Math.min(1.15, camPitch + dy * 0.004)); });
+addEventListener('mouseup', () => { if (drag && drag.moved < 6 && state === 'play') wantAttack = true; drag = null; });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+$('codeGo').onclick = trySolve; $('codeCancel').onclick = closeCode;
+['d0', 'd1', 'd2'].forEach((id, i, arr) => $(id).addEventListener('input', () => { $(id).value = $(id).value.replace(/[^0-9]/g, ''); if ($(id).value && i < 2) $(arr[i + 1]).focus(); }));
+
+function startGame(key) {
+  heroKey = key; hero = HEROES[key];
+  if (P.mesh) scene.remove(P.mesh);
+  P.mesh = makeHuman(hero.shirt, hero.hair, hero.scale); scene.add(P.mesh);
+  comps.forEach(c => scene.remove(c.mesh)); comps.length = 0;
+  Object.keys(HEROES).filter(k => k !== key).forEach(k => { const h = HEROES[k], m = makeHuman(h.shirt, h.hair, h.scale); scene.add(m); comps.push({ mesh: m, x: SPAWN.x, z: SPAWN.z, face: 0, walk: 0 }); });
+  P.maxHp = hero.hp; P.hp = hero.hp; P.stamina = CFG.staminaMax; deaths = 0;
+  $('title').classList.add('hidden'); $('hud').classList.remove('hidden');
+  AUDIO.start(); loadDimension(0); camera.position.set(SPAWN.x, 8, SPAWN.z + 10); state = 'play';
+  toast('Find the 3 hints. Everything that glows is watching you.', 5);
+}
+Object.keys(HEROES).forEach(k => {
+  const h = HEROES[k], el = document.createElement('div'); el.className = 'hero';
+  el.innerHTML = '<b style="color:#' + h.shirt.toString(16).padStart(6, '0') + '">' + h.name + '</b><span>' + h.blurb + '</span>';
+  el.onclick = () => startGame(k); $('heroes').appendChild(el);
+});
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
